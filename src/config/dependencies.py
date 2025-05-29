@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Optional
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -45,8 +45,8 @@ def get_jwt_auth_manager(settings: BaseAppSettings = Depends(get_settings)) -> J
 
 
 async def get_current_user_id(
+    request: Request,
     jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
-    request: Request = None
 ) -> int:
     """
     Extract the user from JWT access token and load it from the database.
@@ -77,7 +77,7 @@ async def get_current_user_id(
             detail="Invalid or expired token"
         )
 
-    user_id: int | None = payload.get("user_id")
+    user_id: Optional[int] = payload.get("user_id")
     if user_id is None:
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED,

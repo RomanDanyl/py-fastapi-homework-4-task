@@ -22,22 +22,22 @@ class ProfileCreateSchema(BaseModel):
 
     @field_validator("first_name", "last_name")
     @classmethod
-    def validate_first_name(cls, value: str) -> None:
+    def validate_first_name(cls, value: str) -> Optional[str]:
         return validate_name(value)
 
     @field_validator("gender")
     @classmethod
-    def validate_gender(cls, value: str) -> None:
+    def validate_gender(cls, value: str) -> Optional[str]:
         return validate_gender(value)
 
     @field_validator("date_of_birth")
     @classmethod
-    def validate_date_of_birth(cls, value: date) -> None:
+    def validate_date_of_birth(cls, value: date) -> Optional[date]:
         return validate_birth_date(value)
 
     @field_validator("info")
     @classmethod
-    def validate_info(cls, value: str) -> str:
+    def validate_info(cls, value: str) -> Optional[str]:
         if value is None or value.strip() == "":
             raise ValueError("Info field cannot be empty or contain only spaces.")
         return value

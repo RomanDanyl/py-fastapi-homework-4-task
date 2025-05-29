@@ -29,7 +29,7 @@ async def create_profile(
     avatar: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     s3_client: S3StorageInterface = Depends(get_s3_storage_client),
-    current_user_id: UserModel = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id)
 ):
     try:
         ProfileCreateSchema(
@@ -74,8 +74,8 @@ async def create_profile(
 
     profile = UserProfileModel(
         user_id=user_id,
-        first_name=first_name.lower(),
-        last_name=last_name.lower(),
+        first_name=first_name.lower() if first_name else None,
+        last_name=last_name.lower() if last_name else None,
         gender=gender,
         date_of_birth=date_of_birth,
         info=info,
