@@ -57,7 +57,9 @@ async def get_current_user_id(
         if e.detail == "Not authenticated":
             raise HTTPException(status_code=401, detail="Authorization header is missing")
         elif e.detail == "Invalid authentication credentials":
-            raise HTTPException(status_code=401, detail="Invalid Authorization header format. Expected 'Bearer <token>'")
+            raise HTTPException(
+                status_code=401, detail="Invalid Authorization header format. Expected 'Bearer <token>'"
+            )
         else:
             raise
 
