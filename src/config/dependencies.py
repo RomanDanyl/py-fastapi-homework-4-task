@@ -2,11 +2,6 @@ from typing import Type, Optional
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import ExpiredSignatureError, JWTError
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-from starlette import status
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from config import BaseAppSettings
