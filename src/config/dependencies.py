@@ -1,29 +1,24 @@
-import os
+from typing import Type
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import ExpiredSignatureError, JWTError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from starlette import status
+from starlette.status import HTTP_401_UNAUTHORIZED
 
-from config.settings import TestingSettings, Settings, BaseAppSettings
+from config import BaseAppSettings
+from config.utils import get_settings
+from exceptions import TokenExpiredError, InvalidTokenError
 from notifications import EmailSenderInterface, EmailSender
 from security.interfaces import JWTAuthManagerInterface
 from security.token_manager import JWTAuthManager
 from storages import S3StorageInterface, S3StorageClient
 
 
-def get_settings() -> BaseAppSettings:
-    """
-    Retrieve the application settings based on the current environment.
-
-    This function reads the 'ENVIRONMENT' environment variable (defaulting to 'developing' if not set)
-    and returns a corresponding settings instance. If the environment is 'testing', it returns an instance
-    of TestingSettings; otherwise, it returns an instance of Settings.
-
-    Returns:
-        BaseAppSettings: The settings instance appropriate for the current environment.
-    """
-    environment = os.getenv("ENVIRONMENT", "developing")
-    if environment == "testing":
-        return TestingSettings()
-    return Settings()
+security = HTTPBearer()
 
 
 def get_jwt_auth_manager(settings: BaseAppSettings = Depends(get_settings)) -> JWTAuthManagerInterface:
@@ -47,6 +42,46 @@ def get_jwt_auth_manager(settings: BaseAppSettings = Depends(get_settings)) -> J
         secret_key_refresh=settings.SECRET_KEY_REFRESH,
         algorithm=settings.JWT_SIGNING_ALGORITHM
     )
+
+
+async def get_current_user_id(
+    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+    request: Request = None
+) -> int:
+    """
+    Extract the user from JWT access token and load it from the database.
+    """
+    try:
+        credentials: HTTPAuthorizationCredentials = await security(request)
+    except HTTPException as e:
+        if e.detail == "Not authenticated":
+            raise HTTPException(status_code=401, detail="Authorization header is missing")
+        elif e.detail == "Invalid authentication credentials":
+            raise HTTPException(status_code=401, detail="Invalid Authorization header format. Expected 'Bearer <token>'")
+        else:
+            raise
+
+    token = credentials.credentials
+    try:
+        payload = jwt_manager.decode_access_token(token)
+    except TokenExpiredError:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="Token has expired."
+        )
+    except InvalidTokenError:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+
+    user_id: int | None = payload.get("user_id")
+    if user_id is None:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="Token payload missing 'user_id'"
+        )
+    return user_id
 
 
 def get_accounts_email_notificator(
