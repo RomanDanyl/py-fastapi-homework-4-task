@@ -85,4 +85,13 @@ async def create_profile(
     await db.commit()
     await db.refresh(profile)
 
-    return profile
+    return ProfileResponseSchema(
+        id=profile.id,
+        user_id=profile.user_id,
+        first_name=profile.first_name,
+        last_name=profile.last_name,
+        gender=profile.gender,
+        date_of_birth=profile.date_of_birth,
+        info=profile.info,
+        avatar=await s3_client.get_file_url(profile.avatar),
+    )
